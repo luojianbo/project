@@ -1,4 +1,4 @@
-package com.rufast.aop;
+package com.runfast.aop;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.serializer.SerializerFeature;
@@ -9,13 +9,10 @@ import org.aspectj.lang.annotation.After;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
-
-import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 
 
@@ -26,7 +23,7 @@ import javax.servlet.http.HttpServletRequest;
 @Component
 @Aspect
 @Slf4j
-public class LogAspect {
+public class ControllerLogAspect {
 
     @Before("execution(* com.runfast..controller..*.*(..)) || execution(* com.gxptkc..controller..*.*(..)) || execution(* com.ptkc..controller..*.*(..))")
     public void doBeforeInServiceLayer(JoinPoint pjp) {
