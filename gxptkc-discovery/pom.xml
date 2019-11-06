@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.runfast</groupId>
+    <artifactId>gxptkc-discovery</artifactId>
+    <version>5.0</version>
+    <packaging>jar</packaging>
+    <properties>
+        <java.version>1.8</java.version>
+        <discovery.version>4.13.0</discovery.version>
+        <spring.cloud.version>Greenwich.SR2</spring.cloud.version>
+        <spring.boot.version>2.1.7.RELEASE</spring.boot.version>
+        <lombok.version>1.18.4</lombok.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-parent</artifactId>
+            <version>${spring.boot.version}</version>
+            <type>pom</type>
+            <scope>import</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <!--灰度发布-->
+        <dependency>
+            <groupId>com.nepxion</groupId>
+            <artifactId>discovery-plugin-starter-nacos</artifactId>
+            <version>${discovery.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nepxion</groupId>
+            <artifactId>discovery-plugin-strategy-starter-hystrix</artifactId>
+            <version>${discovery.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.nepxion</groupId>
+            <artifactId>discovery-plugin-strategy-starter-service</artifactId>
+            <version>${discovery.version}</version>
+        </dependency>
+    </dependencies>
+
+    <!-- 发布到私服: 设置 version 后，选择 maven 的 deploy 命令-->
+    <!-- 建议放到pom.xml的最后 -->
+    <distributionManagement>
+        <repository>
+            <id>releases</id>
+            <name>gxptkc-release</name>
+            <url>http://192.168.2.20:8881/repository/gxptkc-release/</url>
+        </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>gxptkc-snapshot</name>
+            <url>http://192.168.2.20:8881/repository/gxptkc-snapshot/</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>
