@@ -27,18 +27,26 @@ public class ControllerLogAspect {
 
     @Before("execution(* com.runfast..controller..*.*(..)) || execution(* com.gxptkc..controller..*.*(..)) || execution(* com.ptkc..controller..*.*(..))")
     public void doBeforeInServiceLayer(JoinPoint pjp) {
-        RequestAttributes ra = RequestContextHolder.getRequestAttributes();
-        ServletRequestAttributes sra = (ServletRequestAttributes) ra;
-        HttpServletRequest request = sra.getRequest();
-        if(!"initBinder".equals(pjp.getSignature().getName())) {
-            try {
+        try {
+            if(!"initBinder".equals(pjp.getSignature().getName())) {
 
-                log.info("[{}.{}.{}]RequestHeader : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), ra.getSessionId(), getHeaderPramater(request));
-                String str = getRequestPramater(request, pjp.getArgs());
-                log.info("[{}.{}.{}]RequestBody   : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), ra.getSessionId(), str);
-            } catch (Exception e) {
-                e.printStackTrace();
+                String sessionid= null;
+                String header = null;
+                String httpreq = null;
+                RequestAttributes ra = RequestContextHolder.getRequestAttributes();
+                if(ra != null) {
+                    ServletRequestAttributes sra = (ServletRequestAttributes) ra;
+                    HttpServletRequest request = sra.getRequest();
+                    sessionid = sra.getSessionId();
+                    header = getHeaderPramater(request);
+                    httpreq = getRequestPramater(request, pjp.getArgs());
+                }
+                log.info("[{}.{}.{}]RequestHeader : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, header);
+                log.info("[{}.{}.{}]RequestBody   : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, httpreq);
+
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -49,15 +57,23 @@ public class ControllerLogAspect {
 
     @Around("execution(* com.runfast..controller..*.*(..)) || execution(* com.gxptkc..controller..*.*(..)) || execution(* com.ptkc..controller..*.*(..))")
     public Object doAround(ProceedingJoinPoint pjp) throws Throwable {
-        RequestAttributes ra = RequestContextHolder.getRequestAttributes();
-        ServletRequestAttributes sra = (ServletRequestAttributes) ra;
         Object result = pjp.proceed();
-        if(!"initBinder".equals(pjp.getSignature().getName())) {
-            try {
-                log.info("[{}.{}.{}]ResponseBody  : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), ra.getSessionId(), JSON.toJSONString(result, SerializerFeature.WriteMapNullValue));
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+
+            if(!"initBinder".equals(pjp.getSignature().getName())) {
+
+                RequestAttributes ra = RequestContextHolder.getRequestAttributes();
+                String sessionid= null;
+                if(ra != null) {
+                    ServletRequestAttributes sra = (ServletRequestAttributes) ra;
+                    sessionid = sra.getSessionId();
+                }
+                String body = JSON.toJSONString(result, SerializerFeature.WriteMapNullValue);
+                log.info("[{}.{}.{}]ResponseBody  : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, body);
+
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return result;
     }
@@ -65,6 +81,9 @@ public class ControllerLogAspect {
 
 
     private String getHeaderPramater(HttpServletRequest request){
+        if(request == null){
+            return "request is null";
+        }
         StringBuffer sb = new StringBuffer();
         sb.append("method=");
         sb.append(request.getMethod());
@@ -94,9 +113,12 @@ public class ControllerLogAspect {
     }
 
     private String getRequestPramater(HttpServletRequest request,Object[] args){
-        String contentType = request.getContentType();
         //获取请求参数集合并进行遍历拼接
         try {
+            if(request == null){
+                return JSON.toJSONString(args);
+            }
+            String contentType = request.getContentType();
             //获取参数
             if (contentType != null && contentType.toLowerCase().contains("application/json")) {
                 return JSON.toJSONString(args);
