@@ -74,6 +74,7 @@ public class NacosConfigHandler {
                     for(String infos :services){
                         String[] info= infos.split(":");
                         MyDiscoveryEnabledStrategy.serviceMap.put("default_group@@"+info[0],info[1]);
+                        MyDiscoveryEnabledStrategy.serviceMap.put(info[0],info[1]);
                     }
                 }
 

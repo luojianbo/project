@@ -18,6 +18,7 @@ import com.netflix.loadbalancer.Server;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -49,9 +50,12 @@ public class MyDiscoveryEnabledStrategy implements DiscoveryEnabledStrategy {
     @Override
     public boolean apply(Server server) {
         // 对Rest调用传来的Header参数（例如：mobile）做策略
-
-        return applyFromHeader(server);
-
+        try {
+            return applyFromHeader(server);
+        }catch (Exception e){
+            e.printStackTrace();
+            return true;
+        }
     }
 
     // 根据REST调用传来的Header参数（例如：mobile），选取执行调用请求的服务实例
@@ -60,12 +64,15 @@ public class MyDiscoveryEnabledStrategy implements DiscoveryEnabledStrategy {
             return true;
         }
         String clientVersion = serviceStrategyContextHolder.getHeader("clientVersion");
-        String remoteIp= IpUtils.getIpAddr(serviceStrategyContextHolder.getRestAttributes().getRequest());
+        String remoteIp= getIp();
         String serviceId = pluginAdapter.getServerServiceId(server);
         String version = pluginAdapter.getServerVersion(server);
         String region = pluginAdapter.getServerRegion(server);
         String address = server.getHostPort();
-
+        if(StringUtils.isEmpty(remoteIp) && StringUtils.isEmpty(clientVersion)) {
+            log.warn("灰度策略失效，获取请求头部 remoteIp is null and clientVersion is null");
+            return true;
+        }
         if(serviceMap.size() >0 && serviceMap.get(serviceId) != null){//有灰度服务
 
             if(clientVersionMap.size() >0 && remoteIpMap.size() >0){//版本号+远程ip灰度
@@ -80,6 +87,7 @@ public class MyDiscoveryEnabledStrategy implements DiscoveryEnabledStrategy {
                     if(StringUtils.equals(version, serviceMap.get(serviceId))){
                         return false;
                     }else{
+
                         return true;
                     }
                 }
@@ -131,6 +139,16 @@ public class MyDiscoveryEnabledStrategy implements DiscoveryEnabledStrategy {
             }
         }
         return false;
+    }
+
+    private String getIp(){
+        ServletRequestAttributes attributes = serviceStrategyContextHolder.getRestAttributes();
+        if(attributes == null){
+            //log.warn("The ServletRequestAttributes object is lost for thread switched probably");
+            return null;
+        }
+
+        return IpUtils.getIpAddr(attributes.getRequest());
     }
 
 

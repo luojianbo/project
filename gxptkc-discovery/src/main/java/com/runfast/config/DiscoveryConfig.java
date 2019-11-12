@@ -56,20 +56,27 @@ public class DiscoveryConfig implements RequestInterceptor {
     }
 
     public void apply(RequestTemplate template){
+        try {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder
                 .getRequestAttributes();
-        HttpServletRequest request = attributes.getRequest();
-        Enumeration<String> headerNames = request.getHeaderNames();
-        if (headerNames != null) {
-            while (headerNames.hasMoreElements()) {
-                String name = headerNames.nextElement();
-                if("content-length".equals(name)){
-                    continue;
-                }
-                String values = request.getHeader(name);
-                template.header(name, values);
+            if(attributes != null) {
 
+                    HttpServletRequest request = attributes.getRequest();
+                    Enumeration<String> headerNames = request.getHeaderNames();
+                    if (headerNames != null) {
+                        while (headerNames.hasMoreElements()) {
+                            String name = headerNames.nextElement();
+                            if ("content-length".equals(name)) {
+                                continue;
+                            }
+                            String values = request.getHeader(name);
+                            template.header(name, values);
+
+                        }
+                    }
             }
+        }catch (Exception e){
+            e.printStackTrace();
         }
 
     }
