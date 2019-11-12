@@ -1,0 +1,97 @@
+server:
+  port: '@project.port@'
+spring:
+  application:
+     name: server-gateway
+  profiles:
+     active: '@project.active@'
+  redis:
+    lettuce:
+      pool:
+        # 连接池最大连接数（使用负值表示没有限制）
+        max-active: 200
+        # 连接池中的最大空闲连接
+        max-idle: 20
+        # 连接池中的最小空闲连接
+        min-idle: 5
+        # 连接池最大阻塞等待时间（使用负值表示没有限制）
+        max-wait: -1ms
+    # 连接超时时间（毫秒）默认是2000ms
+    timeout: 2000ms
+  cloud:
+      nacos:
+        discovery:
+          metadata:
+            # 项目版本号
+            version: 1.0
+      gateway:
+        discovery:
+          locator:
+            enabled: true
+            lowerCaseServiceId: false
+          globalcors:
+            corsConfigurations:
+              '[/**]':
+                allowedOrigins: "*"
+                allowedMethods: "*"
+        default-filters: #全局配置熔断
+        - name: Hystrix
+          args:
+            name: fallbackcmd
+            fallbackUri: forward:/fallback
+logging:
+  config: classpath:log4j2.xml
+
+management:
+  endpoints:
+    web:
+      exposure:
+       include: shutdown
+    #注意下面这个位置！！
+  endpoint:
+    shutdown:
+      enabled: true
+
+nacos:
+  conf:
+    gateway_conf: gateway_conf:gateway_group
+    clientId_conf: clientId_conf:gateway_group
+    nologin_conf: nologin_conf:gateway_group
+    token_url_conf: token_url_conf:gateway_group
+    discovery_conf: discovery_conf:discovery_group
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000 #隔离策略的超时时间
+          semaphore:
+            maxConcurrentRequests: 5000 #指任意时间点允许的并发数。当请求达到或超过该设置值后，其其余就会被拒绝
+
+
+ignore:
+  urls:
+    - /*login/*
+    - /websocket/*
+    - /paotuiWebsocket/*
+    - /send
+    - /server/uploadImgToken/getToken
+    - /server/binding/assistant/merchant_url
+    - /server/binding/assistant/*
+    - /check
+    - /server/activity_share/info
+    - /server/activity_share/receive
+    - /api/user/account/login/*
+    - /api/user/wm/home/agent/*
+    - /api/user/wm/home/page/*
+    - /api/user/account/miniLogin/*
+
+feign:
+  hystrix:
+    enabled: true
+
+ribbon:
+  ReadTimeout: 10000
+  ConnectTimeout: 10000
