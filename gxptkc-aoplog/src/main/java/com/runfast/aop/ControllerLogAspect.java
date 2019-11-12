@@ -28,7 +28,7 @@ public class ControllerLogAspect {
     @Before("execution(* com.runfast..controller..*.*(..)) || execution(* com.gxptkc..controller..*.*(..)) || execution(* com.ptkc..controller..*.*(..))")
     public void doBeforeInServiceLayer(JoinPoint pjp) {
         try {
-            if(!"initBinder".equals(pjp.getSignature().getName())) {
+            if(isPrint(pjp.getTarget().getClass().getSimpleName(),pjp.getSignature().getName())) {
 
                 String sessionid= null;
                 String header = null;
@@ -60,7 +60,7 @@ public class ControllerLogAspect {
         Object result = pjp.proceed();
         try {
 
-            if(!"initBinder".equals(pjp.getSignature().getName())) {
+            if(isPrint(pjp.getTarget().getClass().getSimpleName(),pjp.getSignature().getName())) {
 
                 RequestAttributes ra = RequestContextHolder.getRequestAttributes();
                 String sessionid= null;
@@ -78,6 +78,13 @@ public class ControllerLogAspect {
         return result;
     }
 
+
+    private boolean isPrint(String className,String method){
+        if("initBinder".equals(method) || "CheckController".equals(className)) {
+           return false;
+        }
+        return true;
+    }
 
 
     private String getHeaderPramater(HttpServletRequest request){
