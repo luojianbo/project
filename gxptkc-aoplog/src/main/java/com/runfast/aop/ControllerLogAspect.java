@@ -80,7 +80,7 @@ public class ControllerLogAspect {
 
 
     private boolean isPrint(String className,String method){
-        if("initBinder".equals(method) || "CheckController".equals(className)) {
+        if("initBinder".equals(method) || "setPaotuiList".equals(method) ||"CheckController".equals(className) ||"PaoTuiDiaoDuWebsocketController".equals(className)) {
            return false;
         }
         return true;
