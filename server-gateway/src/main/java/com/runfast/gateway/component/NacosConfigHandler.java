@@ -17,7 +17,10 @@ import org.springframework.cloud.gateway.route.RouteDefinition;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 
 /**
@@ -203,32 +206,30 @@ public class NacosConfigHandler {
             MyDiscoveryEnabledStrategy.clientVersionMap.clear();
             MyDiscoveryEnabledStrategy.remoteIpMap.clear();
             MyDiscoveryEnabledStrategy.isOpen = false;
-            GrayscaleInfo grayscaleInfo = JSONObject.parseObject(configInfo,GrayscaleInfo.class);
-            if(grayscaleInfo.isOpen()){//灰度开启
-                if(StringUtils.isNotEmpty(grayscaleInfo.getService())){
-                    String[] services= grayscaleInfo.getService().split(",");
-                    for(String infos :services){
-                        String[] info= infos.split(":");
-                        MyDiscoveryEnabledStrategy.serviceMap.put("default_group@@"+info[0],info[1]);
-                        MyDiscoveryEnabledStrategy.serviceMap.put(info[0],info[1]);
-                    }
-                }
+            List<GrayscaleInfo> list = JSONObject.parseArray(configInfo,GrayscaleInfo.class);
+            if(list != null && list.size() >0){
+                list.forEach(grayscaleInfo -> {
 
-                if(StringUtils.isNotEmpty(grayscaleInfo.getClientVersion())){
-                    String[] infos= grayscaleInfo.getClientVersion().split(",");
-                    for(String info :infos){
-                        MyDiscoveryEnabledStrategy.clientVersionMap.put(info,info);
+                    if(StringUtils.isNotEmpty(grayscaleInfo.getService())){
+                        String[] services= grayscaleInfo.getService().toLowerCase().split(",");
+                        for(String infos :services){
+                            if(MyDiscoveryEnabledStrategy.serviceMap.get(infos) == null){
+                                MyDiscoveryEnabledStrategy.serviceMap.put(infos, grayscaleInfo.getClientVersion().toLowerCase());
+                            }else{
+                                MyDiscoveryEnabledStrategy.serviceMap.put(infos, MyDiscoveryEnabledStrategy.serviceMap.get(infos)+","+grayscaleInfo.getClientVersion().toLowerCase());
+                            }
+                        }
                     }
-                }
+                    if(StringUtils.isNotEmpty(grayscaleInfo.getClientVersion())){
+                        String[] infos= grayscaleInfo.getClientVersion().toLowerCase().split(",");
+                        for(String info :infos){
+                            MyDiscoveryEnabledStrategy.clientVersionMap.put(info,info);
+                        }
+                    }
 
-                if(StringUtils.isNotEmpty(grayscaleInfo.getRemoteIp())){
-                    String[] infos= grayscaleInfo.getRemoteIp().split(",");
-                    for(String info :infos){
-                        MyDiscoveryEnabledStrategy.remoteIpMap.put(info,info);
-                    }
-                }
-                log.info("clientVersionMap size = "+MyDiscoveryEnabledStrategy.clientVersionMap.size()+",remoteIpMap size = "+MyDiscoveryEnabledStrategy.remoteIpMap.size()+",serviceMap size = "+MyDiscoveryEnabledStrategy.serviceMap.size());
+                });
             }
+            log.info("clientVersionMap size = "+MyDiscoveryEnabledStrategy.clientVersionMap.size()+",remoteIpMap size = "+MyDiscoveryEnabledStrategy.remoteIpMap.size()+",serviceMap size = "+MyDiscoveryEnabledStrategy.serviceMap.size());
             if(MyDiscoveryEnabledStrategy.serviceMap.size() >0) {
                 if(MyDiscoveryEnabledStrategy.clientVersionMap.size() >0 || MyDiscoveryEnabledStrategy.remoteIpMap.size() >0) {//版本号+远程ip灰度
                     MyDiscoveryEnabledStrategy.isOpen = true;
@@ -240,4 +241,5 @@ public class NacosConfigHandler {
         }
 
     }
+
 }

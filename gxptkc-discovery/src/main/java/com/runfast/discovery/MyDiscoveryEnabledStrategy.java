@@ -7,6 +7,22 @@ package com.runfast.discovery;
  * <p>Company: Nepxion</p>
  * @author Haojun Ren
  * @version 1.0
+ *
+ * [
+ * 	{
+ * 	    "service": "**:pre,**:**.pre",
+ * 	    "clientVersion": "**-pre,**-**.pre,**-**.pre2,200001-2019.12.1,200005-19.12.0"
+ * 	},
+ * 	{
+ * 	    "service": "**:**.yufabu",
+ * 	    "clientVersion": "**-**.newtest"
+ * 	},
+ * 	{
+ * 	    "service": "**:**.nwtest",
+ * 	    "clientVersion": "**-**.nwtest"
+ * 	}
+ * ]
+ *
  */
 
 
@@ -18,6 +34,8 @@ import com.netflix.loadbalancer.Server;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.AntPathMatcher;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.HashMap;
@@ -34,12 +52,18 @@ import java.util.Map;
 @Slf4j
 public class MyDiscoveryEnabledStrategy implements DiscoveryEnabledStrategy {
 
-
+    private AntPathMatcher matcher = new AntPathMatcher();
     public static Map<String,String> serviceMap = new HashMap<>();//灰度服务列表
     public static Map<String,String> clientVersionMap = new HashMap<>();//灰度前端版本
     public static Map<String,String> remoteIpMap = new HashMap<>();//灰度前端ip
     public static boolean isOpen = false;//是否开启灰度
+    public static final  String SERVICE_STR=":";//灰度服务名称和版本号分隔符
+    public static final  String VERSION_STR="-";//灰度客户端编号和版本号分隔符
+    @Value("${spring.application.name:}")
+    private String serverName;
 
+    @Value("${spring.cloud.nacos.discovery.metadata.version:}")
+    private String nacosVersion;
 
     @Autowired
     private ServiceStrategyContextHolder serviceStrategyContextHolder;
@@ -60,87 +84,94 @@ public class MyDiscoveryEnabledStrategy implements DiscoveryEnabledStrategy {
 
     // 根据REST调用传来的Header参数（例如：mobile），选取执行调用请求的服务实例
     private boolean applyFromHeader(Server server) {
-        if(isOpen == false){
+        if(!isOpen){
             return true;
         }
-        String clientVersion = serviceStrategyContextHolder.getHeader("clientVersion");
-        String remoteIp= getIp();
+        //String remoteIp= getIp() + "," + pluginAdapter.getHost();
+        String clientVersion = getClientVersion();
+        if (StringUtils.isNotEmpty(clientVersion)) {
+            clientVersion = clientVersion.toLowerCase();
+        }
+
         String serviceId = pluginAdapter.getServerServiceId(server);
         String version = pluginAdapter.getServerVersion(server);
-        String region = pluginAdapter.getServerRegion(server);
         String address = server.getHostPort();
-        if(StringUtils.isEmpty(remoteIp) && StringUtils.isEmpty(clientVersion)) {
-            log.warn("灰度策略失效，获取请求头部 remoteIp is null and clientVersion is null");
-            return true;
-        }
-        if(serviceMap.size() >0 && serviceMap.get(serviceId) != null){//有灰度服务
+        String servStr = (serviceId+SERVICE_STR+version).toLowerCase();
+        String ver = serviceCheck(servStr);
+        if(ver != null){//有匹配版本号规则
+            if(versionCheck(clientVersion,ver)){
+                log.info("负载均衡用户定制触发clientVersion灰度：clientVersion={}, serviceId={}:{},  address={}", clientVersion,  serviceId, version, address);
+                return true;
+            }else{
+                return false;
+            }
+        }else{//无版本号规则
+            if(versionCheck(clientVersion)){
 
-            if(clientVersionMap.size() >0 && remoteIpMap.size() >0){//版本号+远程ip灰度
-                if(clientVersionMap.get(clientVersion) != null && ipCheck(remoteIp)){
-                    if(StringUtils.equals(version, serviceMap.get(serviceId))){
-                        log.info("负载均衡用户定制触发灰度：clientVersion={}, serviceId={}, version={}, region={}, remoteIp={}, address={}", clientVersion, serviceId, version, region, remoteIp,address);
-                        return true;
-                    }else{
-                        return false;
-                    }
-                }else{
-                    if(StringUtils.equals(version, serviceMap.get(serviceId))){
-                        return false;
-                    }else{
-
-                        return true;
-                    }
-                }
-            }else if(clientVersionMap.size() >0 && remoteIpMap.size() ==0) {//版本号灰度
-                if(clientVersionMap.get(clientVersion) != null){
-                    if(StringUtils.equals(version, serviceMap.get(serviceId))){
-                        log.info("负载均衡用户定制触发灰度：clientVersion={}, serviceId={}, version={}, region={}, remoteIp={}, address={}", clientVersion, serviceId, version, region, remoteIp,address);
-                        return true;
-                    }else{
-                        return false;
-                    }
-                }else{
-                    if(StringUtils.equals(version, serviceMap.get(serviceId))){
-                        return false;
-                    }else{
-                        return true;
-                    }
-                }
-            } else if(clientVersionMap.size() ==0 && remoteIpMap.size() >0) {//版本号灰度
-                if(ipCheck(remoteIp)){
-                    if(StringUtils.equals(version, serviceMap.get(serviceId))){
-                        log.info("负载均衡用户定制触发灰度：clientVersion={}, serviceId={}, version={}, region={}, remoteIp={}, address={}", clientVersion, serviceId, version, region, remoteIp,address);
-                        return true;
-                    }else{
-                        return false;
-                    }
-                }else{
-                    if(StringUtils.equals(version, serviceMap.get(serviceId))){
-                        return false;
-                    }else{
-                        return true;
-                    }
-                }
+                return false;
+            }else{
+                log.info("负载均衡用户定制触发clientVersion灰度：clientVersion={}, serviceId={}:{},  address={}", clientVersion,  serviceId, version, address);
+                return true;
             }
         }
-
-        return true;
     }
 
 
-    private boolean ipCheck(String remoteIp){
-        //检查是否包含ip
-        if(StringUtils.isNotEmpty(remoteIp)) {
-            for (Map.Entry<String, String> entry : remoteIpMap.entrySet()) {
-                String ip = entry.getValue();
-                if (remoteIp.startsWith(ip)) {
-                    return true;
-                }
+
+
+    /**
+     *功能描述  判断请求版本号是否在灰度规则
+     * @param clientVersion
+    * @param servStr
+     * @return boolean
+     * @author luojianbo
+     * @date 2020/1/9 17:03
+     */
+    private boolean versionCheck(String clientVersion,String ver){
+        String[] vers= ver.split(",");
+        for(String info : vers){
+            if(matcher.match(info,clientVersion)){//通配符规则匹配
+                //log.info("clientVersion={},versionInfo={},true",clientVersion,info);
+                return true;
             }
+            //log.info("clientVersion={},versionInfo={},false",clientVersion,info);
         }
         return false;
     }
 
+    private boolean versionCheck(String clientVersion){
+        for (Map.Entry<String, String> entry : clientVersionMap.entrySet()) {
+
+            if(matcher.match(entry.getKey(),clientVersion)){//通配符规则匹配
+                //log.info("clientVersion={},versionKey={},true",clientVersion,entry.getKey());
+                return true;
+            }
+            //log.info("clientVersion={},versionKey={},false",clientVersion,entry.getKey());
+        }
+        return false;
+    }
+
+
+
+    /**
+     *功能描述  判断当前服务是否在灰度规则
+     * @param servStr
+     * @author luojianbo
+     * @date 2020/1/9 17:03
+     */
+    private String serviceCheck(String servStr){
+        String str = null;
+        for (Map.Entry<String, String> entry : serviceMap.entrySet()) {
+
+            if(matcher.match(entry.getKey(),servStr)){
+                // log.info("servStr={},serviceKey={},true",servStr,entry.getKey());
+                str = entry.getValue();
+                break;
+            }
+            //log.info("servStr={},serviceKey={},false",servStr,entry.getKey());
+        }
+        return str;
+    }
     private String getIp(){
         ServletRequestAttributes attributes = serviceStrategyContextHolder.getRestAttributes();
         if(attributes == null){
@@ -149,6 +180,17 @@ public class MyDiscoveryEnabledStrategy implements DiscoveryEnabledStrategy {
         }
 
         return IpUtils.getIpAddr(attributes.getRequest());
+    }
+
+    private String getClientVersion(){
+        String clientVersion = serviceStrategyContextHolder.getHeader("clientVersion");
+        String clientId = serviceStrategyContextHolder.getHeader("clientId");
+        if(StringUtils.isNotEmpty(clientId) && StringUtils.isNotEmpty(clientVersion)){
+            return clientId+VERSION_STR+clientVersion;
+        } else if (StringUtils.isNotEmpty(serverName) && StringUtils.isNotEmpty(nacosVersion)) {
+            return serverName + VERSION_STR + nacosVersion; // 兼容内部调用微服务
+        }
+        return null;
     }
 
 

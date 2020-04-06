@@ -58,7 +58,7 @@ nacos:
     clientId_conf: clientId_conf:gateway_group
     nologin_conf: nologin_conf:gateway_group
     token_url_conf: token_url_conf:gateway_group
-    discovery_conf: discovery_conf:discovery_group
+    discovery_conf: discovery_array_conf:discovery_group
 
 hystrix:
   command:
