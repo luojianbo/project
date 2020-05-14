@@ -41,9 +41,10 @@ public class ControllerLogAspect {
                     header = getHeaderPramater(request);
                     httpreq = getRequestPramater(request, pjp.getArgs());
                 }
-                log.info("[{}.{}.{}]RequestHeader : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, header);
-                log.info("[{}.{}.{}]RequestBody   : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, httpreq);
-
+                if(sessionid != null) {
+                    log.info("[{}.{}.{}]RequestHeader : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, header);
+                    log.info("[{}.{}.{}]RequestBody   : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, httpreq);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -68,9 +69,10 @@ public class ControllerLogAspect {
                     ServletRequestAttributes sra = (ServletRequestAttributes) ra;
                     sessionid = sra.getSessionId();
                 }
-                String body = JSON.toJSONString(result, SerializerFeature.WriteMapNullValue);
-                log.info("[{}.{}.{}]ResponseBody  : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, body);
-
+                if(sessionid != null) {
+                    String body = JSON.toJSONString(result, SerializerFeature.WriteMapNullValue);
+                    log.info("[{}.{}.{}]ResponseBody  : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, body);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -82,6 +84,9 @@ public class ControllerLogAspect {
     private boolean isPrint(String className,String method){
         if("initBinder".equals(method) || "setPaotuiList".equals(method) ||"CheckController".equals(className) ||"PaoTuiDiaoDuWebsocketController".equals(className)) {
            return false;
+        }
+        if("ShopperController".equals(className) && "setList".equals(method) ){
+            return false;
         }
         return true;
     }
@@ -134,7 +139,7 @@ public class ControllerLogAspect {
                 return JSON.toJSONString(request.getParameterMap(), SerializerFeature.WriteMapNullValue);
             }
         }catch(Exception e){
-            e.printStackTrace();
+            //e.printStackTrace();
             return "RequestPramater Error";
         }
 
