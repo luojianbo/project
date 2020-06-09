@@ -33,6 +33,7 @@ public class ControllerLogAspect {
                 String sessionid= null;
                 String header = null;
                 String httpreq = null;
+                String imei = null;
                 RequestAttributes ra = RequestContextHolder.getRequestAttributes();
                 if(ra != null) {
                     ServletRequestAttributes sra = (ServletRequestAttributes) ra;
@@ -40,8 +41,12 @@ public class ControllerLogAspect {
                     sessionid = sra.getSessionId();
                     header = getHeaderPramater(request);
                     httpreq = getRequestPramater(request, pjp.getArgs());
+                    imei = getIMEI(request);
                 }
                 if(sessionid != null) {
+                    if(imei != null){
+                        sessionid = imei;
+                    }
                     log.info("[{}.{}.{}]RequestHeader : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, header);
                     log.info("[{}.{}.{}]RequestBody   : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, httpreq);
                 }
@@ -65,11 +70,16 @@ public class ControllerLogAspect {
 
                 RequestAttributes ra = RequestContextHolder.getRequestAttributes();
                 String sessionid= null;
+                String imei = null;
                 if(ra != null) {
                     ServletRequestAttributes sra = (ServletRequestAttributes) ra;
                     sessionid = sra.getSessionId();
+                    imei = getIMEI(sra.getRequest());
                 }
                 if(sessionid != null) {
+                    if(imei != null){
+                        sessionid = imei;
+                    }
                     String body = JSON.toJSONString(result, SerializerFeature.WriteMapNullValue);
                     log.info("[{}.{}.{}]ResponseBody  : {}", pjp.getTarget().getClass().getSimpleName(), pjp.getSignature().getName(), sessionid, body);
                 }
@@ -145,6 +155,11 @@ public class ControllerLogAspect {
 
     }
 
+
+    private String getIMEI(HttpServletRequest request){
+        return request.getHeader("IMEI");
+    }
+
     private  String getIpAddr(HttpServletRequest request) {
         if (request == null) {
             return "unknown";
@@ -168,4 +183,6 @@ public class ControllerLogAspect {
         }
         return ip;
     }
+
+
 }
